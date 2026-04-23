@@ -16,3 +16,10 @@ class Category(enum.Enum):
 class TransactionType(enum.Enum):
     CREDIT = "credit"
     DEBIT = "debit"
+
+
+class Status(enum.Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    ERROR = "error"
