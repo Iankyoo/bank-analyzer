@@ -6,6 +6,8 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
     SECRET_KEY: str
-
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
 
 settings = Settings()
