@@ -10,7 +10,7 @@ from bank_analyzer.core.config import settings
 pwd_context = PasswordHash.recommended()
 
 credentials_exception = HTTPException(
-    status_code=HTTPStatus.UNAUTHORIZED, detail="Incorrect Email or Password"
+    status_code=HTTPStatus.UNAUTHORIZED, detail="Could not validate credentials"
 )
 
 
