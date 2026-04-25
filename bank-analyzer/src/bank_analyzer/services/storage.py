@@ -20,4 +20,6 @@ async def upload_file(file: UploadFile, user_id: str) -> str:
     contents = await file.read()
     file_obj = io.BytesIO(contents)
 
-    s3_client.upload_fileobjs(file_obj, settings.AWS_BUCKET_NAME, key)
+    s3_client.upload_fileobj(file_obj, settings.AWS_BUCKET_NAME, key)
+
+    return key
