@@ -24,7 +24,7 @@ async def upload(session: Session, user: CurrentUser, file: UploadFile):
 
     s3_key = await upload_file(file=file, user_id=str(user.id))
     statement = await create_statement(
-        session=session, filename=file.filename, user_id=str(user.id)
+        session=session, filename=file.filename, user_id=str(user.id), s3_key=s3_key
     )
 
     return statement

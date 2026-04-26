@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str
     AWS_BUCKET_NAME: str
     AWS_REGION: str
+    GEMINI_API_KEY: str
 
 
 settings = Settings()
