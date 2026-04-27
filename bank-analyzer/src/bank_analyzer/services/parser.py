@@ -2,9 +2,6 @@ import io
 import logging
 
 import pdfplumber
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.prompts import PromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
 from sqlalchemy import select
 
 from bank_analyzer.core.config import settings
@@ -12,7 +9,10 @@ from bank_analyzer.core.database import SessionLocal
 from bank_analyzer.core.enums import Category, Status, TransactionType
 from bank_analyzer.models.statement import Statement
 from bank_analyzer.models.transaction import Transaction
+from bank_analyzer.services.categorizer import parse_transactions
 from bank_analyzer.services.storage import s3_client
+
+logger = logging.getLogger(__name__)
 
 
 def download_pdf_from_s3(s3_key: str) -> io.BytesIO:
@@ -28,40 +28,6 @@ def extract_text_from_pdf(file_obj: io.BytesIO) -> str:
         for page in pdf.pages:
             text += page.extract_text()
     return text
-
-
-model = ChatGoogleGenerativeAI(
-    model=settings.GEMINI_MODEL, google_api_key=settings.GEMINI_API_KEY
-)
-
-logger = logging.getLogger(__name__)
-
-parser = JsonOutputParser()
-
-prompt = PromptTemplate(
-    template="""Você é um analisador de extratos bancários.
-Dado o texto abaixo, extraia todas as transações e retorne APENAS um JSON válido.
-
-Cada transação deve ter:
-- date: data no formato YYYY-MM-DD
-- description: descrição da transação
-- amount: valor absoluto como número decimal
-- transaction_type: "credit" ou "debit"
-- category: uma das opções: food, transport, health, housing, leisure, education,
-salary, investments, other
-
-Retorne APENAS o JSON, sem texto adicional, sem markdown, sem explicações.
-
-Texto do extrato:
-{text}""",
-    input_variables=["text"],
-)
-
-
-def parse_transactions(text: str) -> list:
-    chain = prompt | model | parser
-    result = chain.invoke({"text": text})
-    return result
 
 
 async def process_statement(statement_id: str, s3_key: str) -> None:
