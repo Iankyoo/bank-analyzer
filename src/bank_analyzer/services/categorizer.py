@@ -50,11 +50,9 @@ def categorize_with_gemini(description: str) -> str:
 
 
 def parse_transactions(text: str) -> list:
-    # 1. extrai todas as transações sem categoria
     chain = prompt_extract | model | parser
     transactions = chain.invoke({"text": text})
 
-    # 2. categoriza cada transação
     for t in transactions:
         category = find_similar_transaction(t["description"])
 
