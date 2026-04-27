@@ -21,6 +21,7 @@ class Statement(Base):
     )
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     filename: Mapped[str]
+    s3_key: Mapped[str]
     uploaded_at: Mapped[datetime] = mapped_column(init=False, server_default=func.now())
     status: Mapped[Status]
     user: Mapped["User"] = relationship(init=False)
