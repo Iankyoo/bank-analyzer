@@ -12,12 +12,10 @@ from bank_analyzer.models.statement import Statement
 Session = Annotated[AsyncSession, Depends(get_session)]
 
 
-async def create_statement(
-    session: Session,
-    user_id: str,
-    filename: str,
-):
-    new_statement = Statement(user_id=user_id, filename=filename, status=Status.PENDING)
+async def create_statement(session: Session, user_id: str, filename: str, s3_key: str):
+    new_statement = Statement(
+        user_id=user_id, filename=filename, status=Status.PENDING, s3_key=s3_key
+    )
 
     try:
         session.add(new_statement)
