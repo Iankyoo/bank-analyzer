@@ -8,7 +8,9 @@ from bank_analyzer.api.deps import get_current_user
 from bank_analyzer.api.validators import validate_pdf_upload
 from bank_analyzer.core.database import get_session
 from bank_analyzer.models.user import User
+from bank_analyzer.schemas.analytics import StatementAnalysis
 from bank_analyzer.schemas.statements import StatementPublic
+from bank_analyzer.services.analytics import analyze_statement
 from bank_analyzer.services.parser import process_statement
 from bank_analyzer.services.statement import create_statement
 from bank_analyzer.services.storage import upload_file
@@ -35,3 +37,16 @@ async def upload(
 
     background_tasks.add_task(process_statement, str(statement.id), s3_key)
     return statement
+
+
+@router.get(
+    "/{statement_id}/analysis",
+    response_model=StatementAnalysis,
+    status_code=HTTPStatus.OK,
+)
+async def get_analysis(
+    statement_id: str,
+    session: Session,
+    user: CurrentUser,
+):
+    return await analyze_statement(statement_id, session)
