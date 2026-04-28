@@ -5,7 +5,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from bank_analyzer.core.config import settings
 
 embeddings = GoogleGenerativeAIEmbeddings(
-    model="models/text-embedding-004", google_api_key=settings.GEMINI_API_KEY
+    model="models/gemini-embedding-001", google_api_key=settings.GEMINI_API_KEY
 )
 
 
@@ -14,7 +14,7 @@ class GeminiEmbeddingFunction(EmbeddingFunction):
         return embeddings.embed_documents(input)
 
 
-client = chromadb.Client()
+client = chromadb.PersistentClient(path="./chroma_db")
 
 collection = client.get_or_create_collection(
     name="transactions", embedding_function=GeminiEmbeddingFunction()
