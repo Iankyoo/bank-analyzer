@@ -54,10 +54,25 @@ def test_calculate_category_metrics():
 
     result = calculate_category_metrics(transactions)
 
-    assert result["top_category"] == "housing"
+    assert result["top_category"] == "food"
     assert result["most_frequent_category"] == "food"
     assert result["expenses_by_category"] == {
         "food": Decimal("600"),
         "housing": Decimal("500"),
     }
     assert round(result["average_transaction_value"], 2) == Decimal("366.67")
+
+
+def test_detect_anomalies():
+    transactions = [
+        make_transaction(50, TransactionType.DEBIT, Category.FOOD),
+        make_transaction(50, TransactionType.DEBIT, Category.FOOD),
+        make_transaction(500, TransactionType.DEBIT, Category.FOOD),
+    ]
+
+    result = detect_anomalies(transactions)
+
+    assert len(result) == 1
+    assert result[0]["description"] == transactions[2].description
+    assert result[0]["amount"] == Decimal("500")
+    assert result[0]["category"] == "food"
