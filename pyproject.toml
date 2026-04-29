@@ -40,7 +40,8 @@ dev = [
     "httpx (>=0.28.1,<0.29.0)",
     "ruff (>=0.15.11,<0.16.0)",
     "mypy (>=1.20.2,<2.0.0)",
-    "taskipy (>=1.14.1,<2.0.0)"
+    "taskipy (>=1.14.1,<2.0.0)",
+    "pytest-cov (>=7.1.0,<8.0.0)"
 ]
 
 [tool.ruff]
@@ -62,3 +63,5 @@ run = "uvicorn bank_analyzer.main:app --reload"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-v --cov=src/bank_analyzer --cov-report=term-missing"

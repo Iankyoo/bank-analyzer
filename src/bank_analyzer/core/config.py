@@ -19,4 +19,5 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str
     TEST_DATABASE_URL: str
 
+
 settings = Settings()
