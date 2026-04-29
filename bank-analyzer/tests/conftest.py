@@ -1,3 +1,6 @@
+import asyncio
+import sys
+
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -7,11 +10,14 @@ from bank_analyzer.core.config import settings
 from bank_analyzer.core.database import get_session
 from bank_analyzer.main import app
 
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 engine_test = create_async_engine(settings.TEST_DATABASE_URL)
 SessionTest = async_sessionmaker(bind=engine_test, expire_on_commit=False)
 
 
-@pytest_asyncio.fixture(autouse=True)
+@pytest_asyncio.fixture()
 async def setup_db():
     async with engine_test.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
