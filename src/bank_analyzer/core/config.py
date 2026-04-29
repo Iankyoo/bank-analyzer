@@ -17,6 +17,6 @@ class Settings(BaseSettings):
     AWS_REGION: str
     GEMINI_API_KEY: str
     GEMINI_MODEL: str
-
+    TEST_DATABASE_URL: str
 
 settings = Settings()
