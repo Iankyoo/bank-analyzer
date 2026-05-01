@@ -27,7 +27,7 @@ async def setup_db():
 
 
 @pytest_asyncio.fixture
-async def session():
+async def session(setup_db):
     async with SessionTest() as session:
         yield session
 
