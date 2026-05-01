@@ -55,3 +55,12 @@ async def test_login_wrong_password(client: AsyncClient):
     )
 
     assert response.status_code == 401
+
+
+async def test_login_nonexistent_user(client: AsyncClient):
+    response = await client.post(
+        "/auth/token",
+        data={"username": "nonexistent@email.com", "password": "secret123"},
+    )
+
+    assert response.status_code == 401
