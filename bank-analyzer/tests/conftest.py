@@ -45,3 +45,16 @@ async def client(session):
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def auth_token(client: AsyncClient):
+    await client.post(
+        "/auth/register",
+        json={"email": "test@email.com", "password": "secret123"},
+    )
+    response = await client.post(
+        "/auth/token",
+        data={"username": "test@email.com", "password": "secret123"},
+    )
+    return response.json()["access_token"]
