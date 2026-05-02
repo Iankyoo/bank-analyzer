@@ -1,11 +1,11 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from httpx import AsyncClient
 
 
 async def test_upload_statement(client: AsyncClient, auth_token: str):
     with patch("bank_analyzer.services.storage.s3_client") as mock_s3:
-        mock_s3.upload_fileobj = AsyncMock(return_value=None)
+        mock_s3.upload_fileobj = MagicMock(return_value=None)
 
         with patch(
             "bank_analyzer.api.statements.process_statement", new_callable=AsyncMock
