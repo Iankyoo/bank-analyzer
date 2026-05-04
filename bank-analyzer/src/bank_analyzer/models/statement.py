@@ -24,4 +24,5 @@ class Statement(Base):
     s3_key: Mapped[str]
     uploaded_at: Mapped[datetime] = mapped_column(init=False, server_default=func.now())
     status: Mapped[Status]
+    file_hash: Mapped[str]
     user: Mapped["User"] = relationship(init=False)

@@ -1,3 +1,4 @@
+import hashlib
 import io
 import uuid
 
@@ -23,3 +24,7 @@ async def upload_file(file: UploadFile, user_id: str) -> str:
     s3_client.upload_fileobj(file_obj, settings.AWS_BUCKET_NAME, key)
 
     return key
+
+
+def calculate_file_hash(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
