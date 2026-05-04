@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Login — Bank Analyzer{% endblock %}
+
+{% block content %}
+
+<div class="min-h-[80vh] flex items-center justify-center">
+    <div class="w-full max-w-md">
+
+        <!-- Header -->
+        <div class="mb-8 text-center">
+            <h1 class="serif text-4xl mb-2">Bem-vindo</h1>
+            <p class="muted text-sm">Acesse sua análise financeira</p>
+        </div>
+
+        <!-- Error message -->
+        {% if error %}
+        <div class="mb-4 p-4 rounded-lg border border-red-800 bg-red-950 text-red-400 text-sm">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <!-- Login Form -->
+        <div class="card p-8">
+            <form method="POST" action="/login">
+                <div class="mb-5">
+                    <label class="block text-xs muted mb-2 uppercase tracking-wider">Email</label>
+                    <input
+                        type="email"
+                        name="username"
+                        required
+                        placeholder="seu@email.com"
+                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-green-400 transition-colors"
+                    >
+                </div>
+                <div class="mb-6">
+                    <label class="block text-xs muted mb-2 uppercase tracking-wider">Senha</label>
+                    <input
+                        type="password"
+                        name="password"
+                        required
+                        placeholder="••••••••"
+                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-green-400 transition-colors"
+                    >
+                </div>
+                <button
+                    type="submit"
+                    class="w-full accent-bg py-3 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity"
+                >
+                    Entrar
+                </button>
+            </form>
+        </div>
+
+        <!-- Register link -->
+        <p class="text-center muted text-xs mt-6">
+            Não tem conta?
+            <a href="/register" class="accent hover:underline ml-1">Criar conta</a>
+        </p>
+
+    </div>
+</div>
+
+{% endblock %}
