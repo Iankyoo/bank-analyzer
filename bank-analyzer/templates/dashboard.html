@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — {{ analysis.top_category | capitalize }}{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="mb-10">
+    <p class="muted text-sm mb-1">Relatório de Extrato</p>
+    <h1 class="serif text-4xl mb-2">Análise Financeira</h1>
+    <span class="badge">Dia mais movimentado: dia {{ analysis.busiest_day }}</span>
+</div>
+
+<!-- Overview Cards -->
+<div class="grid grid-cols-2 gap-4 mb-8 md:grid-cols-4">
+    <div class="card p-5">
+        <p class="muted text-xs mb-2">Receita Total</p>
+        <p class="text-2xl font-semibold accent">R$ {{ analysis.total_income }}</p>
+    </div>
+    <div class="card p-5">
+        <p class="muted text-xs mb-2">Despesas Totais</p>
+        <p class="text-2xl font-semibold text-red-400">R$ {{ analysis.total_expenses }}</p>
+    </div>
+    <div class="card p-5">
+        <p class="muted text-xs mb-2">Saldo Líquido</p>
+        <p class="text-2xl font-semibold {% if analysis.net_balance >= 0 %}accent{% else %}text-red-400{% endif %}">
+            R$ {{ analysis.net_balance }}
+        </p>
+    </div>
+    <div class="card p-5">
+        <p class="muted text-xs mb-2">Taxa de Economia</p>
+        <p class="text-2xl font-semibold text-blue-400">{{ "%.1f"|format(analysis.savings_rate) }}%</p>
+    </div>
+</div>
+
+<!-- Categories + Anomalies -->
+<div class="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2">
+
+    <!-- Categories -->
+    <div class="card p-6">
+        <h2 class="serif text-xl mb-4">Gastos por Categoria</h2>
+        {% if analysis.expenses_by_category %}
+            {% for category, amount in analysis.expenses_by_category.items() %}
+            <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                <span class="capitalize text-sm">{{ category }}</span>
+                <span class="font-medium">R$ {{ amount }}</span>
+            </div>
+            {% endfor %}
+            <div class="mt-4 flex gap-4 text-xs muted">
+                <span>Maior gasto: <span class="text-white capitalize">{{ analysis.top_category }}</span></span>
+                <span>Mais frequente: <span class="text-white capitalize">{{ analysis.most_frequent_category }}</span></span>
+            </div>
+        {% else %}
+            <p class="muted text-sm">Nenhum gasto registrado.</p>
+        {% endif %}
+    </div>
+
+    <!-- Anomalies -->
+    <div class="card p-6">
+        <h2 class="serif text-xl mb-4">Anomalias Detectadas</h2>
+        {% if analysis.anomalies %}
+            {% for anomaly in analysis.anomalies %}
+            <div class="py-3 border-b border-gray-800">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium">{{ anomaly.description }}</p>
+                        <p class="text-xs muted capitalize">{{ anomaly.category }} · média: R$ {{ anomaly.average_for_category }}</p>
+                    </div>
+                    <span class="text-red-400 font-semibold text-sm">R$ {{ anomaly.amount }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="flex items-center gap-2 text-sm">
+                <span class="accent">✓</span>
+                <span class="muted">Nenhuma anomalia detectada.</span>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- AI Insight -->
+<div class="card p-8">
+    <div class="flex items-center gap-2 mb-4">
+        <span class="accent text-lg">✦</span>
+        <h2 class="serif text-xl">Insight da IA</h2>
+    </div>
+    <p class="text-gray-300 leading-relaxed text-sm">{{ analysis.ai_insight }}</p>
+</div>
+
+{% endblock %}
