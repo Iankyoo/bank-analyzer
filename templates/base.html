@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bank Analyzer{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'DM Sans', sans-serif; }
+        h1, h2, .serif { font-family: 'DM Serif Display', serif; }
+        body { background: #0f1117; color: #e8e8e8; }
+        .card { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 16px; }
+        .accent { color: #7fffb2; }
+        .accent-bg { background: #7fffb2; color: #0f1117; }
+        .muted { color: #6b7280; }
+        .badge { background: #1e2533; border: 1px solid #2a3547; border-radius: 8px; padding: 4px 10px; font-size: 12px; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="border-b border-gray-800 px-8 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 accent-bg rounded-lg flex items-center justify-center font-bold text-sm">B</div>
+            <span class="serif text-xl">Bank Analyzer</span>
+        </div>
+        <span class="muted text-sm">Análise Inteligente de Extratos</span>
+    </nav>
+
+    <!-- Content -->
+    <main class="px-8 py-10 max-w-6xl mx-auto">
+        {% block content %}{% endblock %}
+    </main>
+
+</body>
+</html>
