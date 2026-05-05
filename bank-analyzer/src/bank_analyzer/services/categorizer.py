@@ -1,6 +1,6 @@
 import logging
 
-from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
+from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -35,35 +35,62 @@ Texto do extrato:
     input_variables=["text"],
 )
 
-prompt_categorize = PromptTemplate(
-    template="""Qual a categoria dessa transação financeira: "{description}"?
-Retorne APENAS uma palavra, sem explicações, sem markdown.
-Opções: food, transport, health, housing, leisure, education, salary, investments,
-other""",
-    input_variables=["description"],
+
+prompt_categorize_batch = PromptTemplate(
+    template="""Você é um analisador de extratos bancários.
+Categorize cada transação abaixo e retorne APENAS um JSON válido.
+
+Transações:
+{transactions}
+
+Para cada transação, retorne um objeto com:
+- description: a descrição original
+- category: 
+    uma das opções:
+        food, transport, health, housing, leisure, education, salary, investments, other
+
+Regras:
+- Use "salary" apenas para transações de CREDIT que representam renda de trabalho
+- Use "investments" para rendimentos e aplicações financeiras
+- Retorne APENAS o JSON, sem markdown, sem explicações
+
+Formato esperado:
+[{{"description": "...", "category": "..."}}]""",
+    input_variables=["transactions"],
 )
 
 
-def categorize_with_gemini(description: str) -> str:
-    chain = prompt_categorize | model | StrOutputParser()
-    return chain.invoke({"description": description}).strip().lower()
+def categorize_batch_with_gemini(transactions: list) -> dict:
+    tx_list = "\n".join([
+        f"- {t['description']} ({t['transaction_type']})"
+        for t in transactions
+    ])
+    chain = prompt_categorize_batch | model | JsonOutputParser()
+    results = chain.invoke({"transactions": tx_list})
+    return {r["description"]: r["category"] for r in results}
 
 
 def parse_transactions(text: str) -> list:
     chain = prompt_extract | model | parser
     transactions = chain.invoke({"text": text})
 
+    unknown = []
     for t in transactions:
         category = find_similar_transaction(t["description"])
+        if category:
+            t["category"] = category
+        else:
+            unknown.append(t)
 
-        if not category:
-            category = categorize_with_gemini(t["description"])
+    if unknown:
+        categories = categorize_batch_with_gemini(unknown)
+        for t in unknown:
+            category = categories.get(t["description"], "other")
+            t["category"] = category
             save_transaction_embedding(
                 id=f"{t['date']}-{t['description']}",
                 description=t["description"],
                 category=category,
             )
-
-        t["category"] = category
 
     return transactions
