@@ -61,10 +61,9 @@ Formato esperado:
 
 
 def categorize_batch_with_gemini(transactions: list) -> dict:
-    tx_list = "\n".join([
-        f"- {t['description']} ({t['transaction_type']})"
-        for t in transactions
-    ])
+    tx_list = "\n".join(
+        [f"- {t['description']} ({t['transaction_type']})" for t in transactions]
+    )
     chain = prompt_categorize_batch | model | JsonOutputParser()
     results = chain.invoke({"transactions": tx_list})
     return {r["description"]: r["category"] for r in results}
