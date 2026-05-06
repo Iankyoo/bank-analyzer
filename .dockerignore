@@ -1,0 +1,8 @@
+.env
+.git
+__pycache__
+*.pyc
+chroma_db
+htmlcov
+.pytest_cache
+tests/
