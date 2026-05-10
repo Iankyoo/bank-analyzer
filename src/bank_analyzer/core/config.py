@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,7 +19,7 @@ class Settings(BaseSettings):
     AWS_REGION: str
     GEMINI_API_KEY: str
     GEMINI_MODEL: str
-    TEST_DATABASE_URL: str
+    TEST_DATABASE_URL: Optional[str] = None
 
 
 settings = Settings()
