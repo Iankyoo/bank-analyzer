@@ -1,13 +1,32 @@
 from collections import Counter
 from decimal import Decimal
+from http import HTTPStatus
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bank_analyzer.core.enums import TransactionType
+from bank_analyzer.models.statement import Statement
 from bank_analyzer.models.transaction import Transaction
 from bank_analyzer.schemas.analytics import StatementAnalysis
 from bank_analyzer.services.insight import generate_insight
+
+
+async def get_owned_statement(
+    statement_id: str, user_id: str, session: AsyncSession
+) -> Statement:
+    result = await session.execute(
+        select(Statement).where(
+            Statement.id == statement_id, Statement.user_id == user_id
+        )
+    )
+    statement = result.scalar_one_or_none()
+    if not statement:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Statement not found"
+        )
+    return statement
 
 
 async def get_statement_transactions(
@@ -113,8 +132,9 @@ def detect_anomalies(transactions: list[Transaction]) -> list[dict]:
 
 
 async def analyze_statement(
-    statement_id: str, session: AsyncSession
+    statement_id: str, user_id: str, session: AsyncSession
 ) -> StatementAnalysis:
+    await get_owned_statement(statement_id, user_id, session)
     transactions = await get_statement_transactions(statement_id, session)
 
     overview = calculate_overview(transactions)

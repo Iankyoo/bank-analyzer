@@ -57,11 +57,16 @@ async def dashboard(
         return RedirectResponse(url="/login")
 
     try:
-        decode_access_token(access_token)
+        email = decode_access_token(access_token)
     except Exception:
         return RedirectResponse(url="/login")
 
-    analysis = await analyze_statement(statement_id, session)
+    result = await session.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    if not user:
+        return RedirectResponse(url="/login")
+
+    analysis = await analyze_statement(statement_id, str(user.id), session)
     return templates.TemplateResponse(
         request=request, name="dashboard.html", context={"analysis": analysis}
     )
