@@ -61,4 +61,4 @@ async def get_analysis(
     session: Session,
     user: CurrentUser,
 ):
-    return await analyze_statement(statement_id, session)
+    return await analyze_statement(statement_id, str(user.id), session)
