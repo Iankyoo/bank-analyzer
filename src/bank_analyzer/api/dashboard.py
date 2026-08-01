@@ -36,7 +36,13 @@ async def login(
         user = await authenticate_user(username, password, session)
         token = create_access_token({"sub": user.email})
         response = RedirectResponse(url="/statements", status_code=302)
-        response.set_cookie(key="access_token", value=token, httponly=True)
+        response.set_cookie(
+            key="access_token",
+            value=token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+        )
         return response
     except Exception:
         return templates.TemplateResponse(
