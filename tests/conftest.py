@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from bank_analyzer.core.base import Base
 from bank_analyzer.core.config import settings
 from bank_analyzer.core.database import get_session
+from bank_analyzer.core.limiter import limiter
 from bank_analyzer.main import app
 
 if sys.platform == "win32":
@@ -34,6 +35,8 @@ async def session(setup_db):
 
 @pytest_asyncio.fixture
 async def client(session):
+    limiter.reset()
+
     async def override_get_session():
         yield session
 

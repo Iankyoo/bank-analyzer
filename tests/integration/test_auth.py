@@ -64,3 +64,38 @@ async def test_login_nonexistent_user(client: AsyncClient):
     )
 
     assert response.status_code == 401
+
+
+async def test_register_rate_limited(client: AsyncClient):
+    for i in range(5):
+        await client.post(
+            "/auth/register",
+            json={"email": f"user{i}@email.com", "password": "secret123"},
+        )
+
+    response = await client.post(
+        "/auth/register",
+        json={"email": "user5@email.com", "password": "secret123"},
+    )
+
+    assert response.status_code == 429
+
+
+async def test_login_rate_limited(client: AsyncClient):
+    await client.post(
+        "/auth/register",
+        json={"email": "ratelimit@email.com", "password": "secret123"},
+    )
+
+    for i in range(5):
+        await client.post(
+            "/auth/token",
+            data={"username": "ratelimit@email.com", "password": "wrong"},
+        )
+
+    response = await client.post(
+        "/auth/token",
+        data={"username": "ratelimit@email.com", "password": "wrong"},
+    )
+
+    assert response.status_code == 429
