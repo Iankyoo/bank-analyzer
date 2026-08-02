@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str
     GEMINI_MODEL: str
     TEST_DATABASE_URL: Optional[str] = None
+    CHROMA_DISTANCE_THRESHOLD: float = 0.35
 
 
 settings = Settings()
