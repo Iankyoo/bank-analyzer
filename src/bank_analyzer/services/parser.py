@@ -32,6 +32,7 @@ def extract_text_from_pdf(file_obj: io.BytesIO) -> str:
 
 async def process_statement(statement_id: str, s3_key: str) -> None:
     async with SessionLocal() as session:
+        statement = None
         try:
             result = await session.execute(
                 select(Statement).where(Statement.id == statement_id)
@@ -64,5 +65,6 @@ async def process_statement(statement_id: str, s3_key: str) -> None:
         except Exception as e:
             logger.error(f"Error processing statement {statement_id}: {e}")
             await session.rollback()
-            statement.status = Status.ERROR
-            await session.commit()
+            if statement is not None:
+                statement.status = Status.ERROR
+                await session.commit()
