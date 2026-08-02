@@ -28,9 +28,16 @@ def get_collection():
 
 
 def find_similar_transaction(description: str) -> str | None:
-    results = get_collection().query(query_texts=[description], n_results=1)
+    results = get_collection().query(
+        query_texts=[description], n_results=1, include=["metadatas", "distances"]
+    )
     if not results["metadatas"][0]:
         return None
+
+    distance = results["distances"][0][0]
+    if distance > settings.CHROMA_DISTANCE_THRESHOLD:
+        return None
+
     return results["metadatas"][0][0]["category"]
 
 
