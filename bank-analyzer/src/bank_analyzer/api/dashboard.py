@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bank_analyzer.core.database import get_session
+from bank_analyzer.core.limiter import limiter
 from bank_analyzer.core.security import create_access_token, decode_access_token
 from bank_analyzer.models.statement import Statement
 from bank_analyzer.models.user import User
@@ -26,6 +27,7 @@ async def login_page(request: Request):
 
 
 @router.post("/login")
+@limiter.limit("5/minute")
 async def login(
     request: Request,
     session: Session,
