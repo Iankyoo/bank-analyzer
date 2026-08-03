@@ -25,6 +25,8 @@ Você faz upload de um extrato bancário em PDF. A API extrai as transações, c
 
 **Async desde o início:** FastAPI + SQLAlchemy 2.0 + psycopg, tudo async. Evita refatoração dolorosa depois.
 
+**Rate limiting na autenticação:** `/auth/register`, `/auth/token` e o `/login` do dashboard são limitados a 5 requisições/minuto por IP (via slowapi), para dificultar força bruta e spam de registro.
+
 ## Rodando localmente
 
 ```bash
@@ -63,6 +65,7 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=bank_analyzer
 TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5433/bank_analyzer_test
+CHROMA_DISTANCE_THRESHOLD=0.35  # opcional, distância máxima do ChromaDB para reaproveitar uma categoria já vista
 ```
 
 ## Endpoints principais
@@ -77,8 +80,11 @@ TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5433/bank_ana
 
 ## Testes
 
+Os testes de integração precisam de um banco de testes rodando:
+
 ```bash
+docker-compose up -d db_test
 task test
 ```
 
-86% de cobertura com testes unitários e de integração. S3 e Gemini são mockados nos testes.
+83% de cobertura com testes unitários e de integração. S3 e Gemini são mockados nos testes.
