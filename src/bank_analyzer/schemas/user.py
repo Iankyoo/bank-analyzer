@@ -1,19 +1,19 @@
 import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 
 
 class UserCreate(BaseModel):
-    email: str
-    password: str
+    email: EmailStr
+    password: str = Field(min_length=8)
 
 
 class UserPublic(BaseModel):
     id: uuid.UUID
-    email: str
+    email: EmailStr
 
 
 class UserDB(BaseModel):
     id: uuid.UUID
-    email: str
+    email: EmailStr
     hashed_password: str
