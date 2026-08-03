@@ -15,4 +15,3 @@ class StatementPublic(BaseModel):
     filename: str
     status: Status
     uploaded_at: datetime
-    s3_key: str

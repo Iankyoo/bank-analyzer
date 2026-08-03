@@ -27,6 +27,24 @@ async def test_register_duplicate_email(client: AsyncClient):
     assert response.status_code == 409
 
 
+async def test_register_invalid_email(client: AsyncClient):
+    response = await client.post(
+        "/auth/register",
+        json={"email": "not-an-email", "password": "secret123"},
+    )
+
+    assert response.status_code == 422
+
+
+async def test_register_short_password(client: AsyncClient):
+    response = await client.post(
+        "/auth/register",
+        json={"email": "test@email.com", "password": "short"},
+    )
+
+    assert response.status_code == 422
+
+
 async def test_login_success(client: AsyncClient):
     await client.post(
         "/auth/register",

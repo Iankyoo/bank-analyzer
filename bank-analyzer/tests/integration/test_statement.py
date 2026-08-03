@@ -19,6 +19,7 @@ async def test_upload_statement(client: AsyncClient, auth_token: str):
     assert response.status_code == 200
     assert response.json()["filename"] == "test.pdf"
     assert response.json()["status"] == "pending"
+    assert "s3_key" not in response.json()
 
 
 async def test_upload_invalid_file_type(client: AsyncClient, auth_token: str):
