@@ -1,29 +1,22 @@
 import hashlib
-import io
 import uuid
-
-import boto3
-from fastapi import UploadFile
+from pathlib import Path
 
 from bank_analyzer.core.config import settings
 
-s3_client = boto3.client(
-    "s3",
-    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-    region_name=settings.AWS_REGION,
-)
+
+def save_file(contents: bytes, user_id: str) -> str:
+    relative_path = Path(user_id) / f"{uuid.uuid4()}.pdf"
+
+    destination = Path(settings.STORAGE_DIR) / relative_path
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(contents)
+
+    return relative_path.as_posix()
 
 
-async def upload_file(file: UploadFile, user_id: str) -> str:
-    key = f"{user_id}/{uuid.uuid4()}.pdf"
-
-    contents = await file.read()
-    file_obj = io.BytesIO(contents)
-
-    s3_client.upload_fileobj(file_obj, settings.AWS_BUCKET_NAME, key)
-
-    return key
+def read_file(file_path: str) -> bytes:
+    return (Path(settings.STORAGE_DIR) / file_path).read_bytes()
 
 
 def calculate_file_hash(content: bytes) -> str:

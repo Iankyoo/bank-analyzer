@@ -1,26 +1,24 @@
 import io
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from bank_analyzer.core.config import settings
 from bank_analyzer.core.enums import Status
 from bank_analyzer.services.parser import (
-    download_pdf_from_s3,
     extract_text_from_pdf,
     process_statement,
+    read_pdf,
 )
+from bank_analyzer.services.storage import save_file
 
 
-def test_download_pdf_from_s3():
-    with patch("bank_analyzer.services.parser.s3_client") as mock_s3:
+def test_read_pdf(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "STORAGE_DIR", str(tmp_path))
+    file_path = save_file(contents=b"fake pdf content", user_id="user_id")
 
-        def fake_download(bucket, key, fileobj):
-            fileobj.write(b"fake pdf content")
+    result = read_pdf(file_path)
 
-        mock_s3.download_fileobj.side_effect = fake_download
-
-        result = download_pdf_from_s3("user_id/test.pdf")
-
-        assert isinstance(result, io.BytesIO)
-        assert result.read() == b"fake pdf content"
+    assert isinstance(result, io.BytesIO)
+    assert result.read() == b"fake pdf content"
 
 
 def test_extract_text_from_pdf():
@@ -53,7 +51,7 @@ async def test_process_statement_query_failure_does_not_raise():
         "bank_analyzer.services.parser.SessionLocal",
         return_value=_mock_session_context(mock_session),
     ):
-        await process_statement("some-id", "some-key")
+        await process_statement("some-id", "some-path")
 
     mock_session.rollback.assert_awaited_once()
     mock_session.commit.assert_not_awaited()
@@ -73,11 +71,11 @@ async def test_process_statement_processing_failure_sets_error_status():
             return_value=_mock_session_context(mock_session),
         ),
         patch(
-            "bank_analyzer.services.parser.download_pdf_from_s3",
-            side_effect=Exception("s3 down"),
+            "bank_analyzer.services.parser.read_pdf",
+            side_effect=FileNotFoundError("file missing"),
         ),
     ):
-        await process_statement("some-id", "some-key")
+        await process_statement("some-id", "some-path")
 
     assert fake_statement.status == Status.ERROR
     mock_session.rollback.assert_awaited_once()

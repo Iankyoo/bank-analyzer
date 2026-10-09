@@ -1,25 +1,35 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
+import pytest
 from httpx import AsyncClient
 
+from bank_analyzer.core.config import settings
 
-async def test_upload_statement(client: AsyncClient, auth_token: str):
-    with patch("bank_analyzer.services.storage.s3_client") as mock_s3:
-        mock_s3.upload_fileobj = MagicMock(return_value=None)
 
-        with patch(
-            "bank_analyzer.api.statements.process_statement", new_callable=AsyncMock
-        ):
-            response = await client.post(
-                "/statements/upload",
-                files={"file": ("test.pdf", b"fake pdf content", "application/pdf")},
-                headers={"Authorization": f"Bearer {auth_token}"},
-            )
+@pytest.fixture(autouse=True)
+def storage_dir(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "STORAGE_DIR", str(tmp_path))
+    return tmp_path
+
+
+async def test_upload_statement(client: AsyncClient, auth_token: str, storage_dir):
+    with patch(
+        "bank_analyzer.api.statements.process_statement", new_callable=AsyncMock
+    ):
+        response = await client.post(
+            "/statements/upload",
+            files={"file": ("test.pdf", b"fake pdf content", "application/pdf")},
+            headers={"Authorization": f"Bearer {auth_token}"},
+        )
 
     assert response.status_code == 200
     assert response.json()["filename"] == "test.pdf"
     assert response.json()["status"] == "pending"
-    assert "s3_key" not in response.json()
+    assert "file_path" not in response.json()
+
+    saved_files = list(storage_dir.rglob("*.pdf"))
+    assert len(saved_files) == 1
+    assert saved_files[0].read_bytes() == b"fake pdf content"
 
 
 async def test_upload_invalid_file_type(client: AsyncClient, auth_token: str):
@@ -43,17 +53,14 @@ async def test_get_analysis_forbidden_for_other_user(client: AsyncClient):
         )
     ).json()["access_token"]
 
-    with patch("bank_analyzer.services.storage.s3_client") as mock_s3:
-        mock_s3.upload_fileobj = MagicMock(return_value=None)
-
-        with patch(
-            "bank_analyzer.api.statements.process_statement", new_callable=AsyncMock
-        ):
-            upload_response = await client.post(
-                "/statements/upload",
-                files={"file": ("test.pdf", b"fake pdf content", "application/pdf")},
-                headers={"Authorization": f"Bearer {token_a}"},
-            )
+    with patch(
+        "bank_analyzer.api.statements.process_statement", new_callable=AsyncMock
+    ):
+        upload_response = await client.post(
+            "/statements/upload",
+            files={"file": ("test.pdf", b"fake pdf content", "application/pdf")},
+            headers={"Authorization": f"Bearer {token_a}"},
+        )
     statement_id = upload_response.json()["id"]
 
     await client.post(

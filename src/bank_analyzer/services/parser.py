@@ -4,22 +4,18 @@ import logging
 import pdfplumber
 from sqlalchemy import select
 
-from bank_analyzer.core.config import settings
 from bank_analyzer.core.database import SessionLocal
 from bank_analyzer.core.enums import Category, Status, TransactionType
 from bank_analyzer.models.statement import Statement
 from bank_analyzer.models.transaction import Transaction
 from bank_analyzer.services.categorizer import parse_transactions
-from bank_analyzer.services.storage import s3_client
+from bank_analyzer.services.storage import read_file
 
 logger = logging.getLogger(__name__)
 
 
-def download_pdf_from_s3(s3_key: str) -> io.BytesIO:
-    file_obj = io.BytesIO()
-    s3_client.download_fileobj(settings.AWS_BUCKET_NAME, s3_key, file_obj)
-    file_obj.seek(0)
-    return file_obj
+def read_pdf(file_path: str) -> io.BytesIO:
+    return io.BytesIO(read_file(file_path))
 
 
 def extract_text_from_pdf(file_obj: io.BytesIO) -> str:
@@ -30,7 +26,7 @@ def extract_text_from_pdf(file_obj: io.BytesIO) -> str:
     return text
 
 
-async def process_statement(statement_id: str, s3_key: str) -> None:
+async def process_statement(statement_id: str, file_path: str) -> None:
     async with SessionLocal() as session:
         statement = None
         try:
@@ -44,7 +40,7 @@ async def process_statement(statement_id: str, s3_key: str) -> None:
             statement.status = Status.PROCESSING
             await session.commit()
 
-            file_obj = download_pdf_from_s3(s3_key)
+            file_obj = read_pdf(file_path)
             text = extract_text_from_pdf(file_obj)
             transactions = parse_transactions(text)
 

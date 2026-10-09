@@ -13,14 +13,11 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     ALGORITHM: str
     TOKEN_EXPIRE_IN_MINUTES: int
-    AWS_ACCESS_KEY_ID: str
-    AWS_SECRET_ACCESS_KEY: str
-    AWS_BUCKET_NAME: str
-    AWS_REGION: str
     GEMINI_API_KEY: str
     GEMINI_MODEL: str
     TEST_DATABASE_URL: Optional[str] = None
     CHROMA_DISTANCE_THRESHOLD: float = 0.35
+    STORAGE_DIR: str = "./storage"
 
 
 settings = Settings()

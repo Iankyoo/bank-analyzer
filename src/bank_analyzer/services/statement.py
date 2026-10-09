@@ -14,13 +14,13 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 
 
 async def create_statement(
-    session: Session, user_id: str, filename: str, s3_key: str, file_hash: str
+    session: Session, user_id: str, filename: str, file_path: str, file_hash: str
 ):
     new_statement = Statement(
         user_id=user_id,
         filename=filename,
         status=Status.PENDING,
-        s3_key=s3_key,
+        file_path=file_path,
         file_hash=file_hash,
     )
 

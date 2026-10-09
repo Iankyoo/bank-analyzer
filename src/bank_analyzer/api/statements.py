@@ -13,7 +13,7 @@ from bank_analyzer.schemas.statements import StatementPublic
 from bank_analyzer.services.analytics import analyze_statement
 from bank_analyzer.services.parser import process_statement
 from bank_analyzer.services.statement import create_statement, get_statement_by_hash
-from bank_analyzer.services.storage import calculate_file_hash, upload_file
+from bank_analyzer.services.storage import calculate_file_hash, save_file
 
 router = APIRouter(prefix="/statements", tags=["statements"])
 
@@ -37,17 +37,16 @@ async def upload(
     if existing:
         return existing
 
-    await file.seek(0)
-    s3_key = await upload_file(file=file, user_id=str(user.id))
+    file_path = save_file(contents=contents, user_id=str(user.id))
     statement = await create_statement(
         session=session,
         filename=file.filename,
         user_id=str(user.id),
-        s3_key=s3_key,
+        file_path=file_path,
         file_hash=file_hash,
     )
 
-    background_tasks.add_task(process_statement, str(statement.id), s3_key)
+    background_tasks.add_task(process_statement, str(statement.id), file_path)
     return statement
 
 
