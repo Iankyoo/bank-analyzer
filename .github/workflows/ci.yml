@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bank_analyzer_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5433/bank_analyzer_test
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5433/bank_analyzer_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bank_analyzer_test
+      SECRET_KEY: ci-secret-key
+      ALGORITHM: HS256
+      TOKEN_EXPIRE_IN_MINUTES: 30
+      # as chamadas ao Gemini são mockadas nos testes; a chave só precisa existir
+      GEMINI_API_KEY: fake-key
+      GEMINI_MODEL: gemini-2.5-flash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Instala dependências
+        run: |
+          pipx install poetry
+          poetry install
+
+      - name: Lint
+        run: |
+          poetry run ruff check .
+          poetry run ruff format --check .
+
+      - name: Testes
+        run: poetry run pytest
+
+      - name: Migrations (upgrade, downgrade e upgrade de novo)
+        run: |
+          poetry run alembic upgrade head
+          poetry run alembic downgrade base
+          poetry run alembic upgrade head
