@@ -10,7 +10,6 @@ from bank_analyzer.core.enums import TransactionType
 from bank_analyzer.models.statement import Statement
 from bank_analyzer.models.transaction import Transaction
 from bank_analyzer.schemas.analytics import StatementAnalysis
-from bank_analyzer.services.insight import generate_insight
 
 
 async def get_owned_statement(
@@ -131,19 +130,24 @@ def detect_anomalies(transactions: list[Transaction]) -> list[dict]:
     return anomalies
 
 
+def calculate_metrics(transactions: list[Transaction]) -> dict:
+    return {
+        **calculate_overview(transactions),
+        **calculate_category_metrics(transactions),
+        **calculate_behavior_metrics(transactions),
+        "anomalies": detect_anomalies(transactions),
+    }
+
+
 async def analyze_statement(
     statement_id: str, user_id: str, session: AsyncSession
 ) -> StatementAnalysis:
-    await get_owned_statement(statement_id, user_id, session)
+    statement = await get_owned_statement(statement_id, user_id, session)
     transactions = await get_statement_transactions(statement_id, session)
 
-    overview = calculate_overview(transactions)
-    category_metrics = calculate_category_metrics(transactions)
-    behavior = calculate_behavior_metrics(transactions)
-    anomalies = detect_anomalies(transactions)
-
-    metrics = {**overview, **category_metrics, **behavior, "anomalies": anomalies}
-
-    ai_insight = generate_insight(metrics)
-
-    return StatementAnalysis(**metrics, ai_insight=ai_insight)
+    # só cálculo local: o insight já foi gerado e salvo no processamento
+    return StatementAnalysis(
+        status=statement.status,
+        **calculate_metrics(transactions),
+        ai_insight=statement.ai_insight,
+    )

@@ -5,6 +5,7 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from bank_analyzer.core.base import Base
 from bank_analyzer.core.config import settings
@@ -15,7 +16,9 @@ from bank_analyzer.main import app
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-engine_test = create_async_engine(settings.TEST_DATABASE_URL)
+# sem pool: cada teste recria tabelas e tipos enum, e conexões reaproveitadas
+# guardariam prepared statements apontando para tipos que não existem mais
+engine_test = create_async_engine(settings.TEST_DATABASE_URL, poolclass=NullPool)
 SessionTest = async_sessionmaker(bind=engine_test, expire_on_commit=False)
 
 

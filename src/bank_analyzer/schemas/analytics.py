@@ -2,6 +2,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from bank_analyzer.core.enums import Status
+
 
 class AnomalySchema(BaseModel):
     description: str
@@ -11,6 +13,8 @@ class AnomalySchema(BaseModel):
 
 
 class StatementAnalysis(BaseModel):
+    status: Status
+
     # visão geral
     total_income: Decimal
     total_expenses: Decimal
@@ -29,5 +33,6 @@ class StatementAnalysis(BaseModel):
     # anomalias
     anomalies: list[AnomalySchema]
 
-    # insight da IA
-    ai_insight: str
+    # insight da IA, gerado uma vez no processamento (None se ainda não
+    # processado ou se a geração falhou)
+    ai_insight: str | None

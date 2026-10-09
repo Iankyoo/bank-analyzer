@@ -85,7 +85,7 @@
         <span class="accent text-lg">✦</span>
         <h2 class="serif text-xl">Insight da IA</h2>
     </div>
-    <p class="text-gray-300 leading-relaxed text-sm">{{ analysis.ai_insight }}</p>
+    <p class="text-gray-300 leading-relaxed text-sm">{{ analysis.ai_insight or "Insight indisponível para este extrato." }}</p>
 </div>
 
 {% endblock %}

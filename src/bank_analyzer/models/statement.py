@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import UUID, ForeignKey, UniqueConstraint, func
+from sqlalchemy import UUID, ForeignKey, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from bank_analyzer.core.base import Base
@@ -29,4 +29,5 @@ class Statement(Base):
     uploaded_at: Mapped[datetime] = mapped_column(init=False, server_default=func.now())
     status: Mapped[Status]
     file_hash: Mapped[str]
+    ai_insight: Mapped[str | None] = mapped_column(Text, default=None)
     user: Mapped["User"] = relationship(init=False)
