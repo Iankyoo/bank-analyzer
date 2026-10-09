@@ -99,3 +99,6 @@ def downgrade() -> None:
     op.drop_table("statements")
     op.drop_table("users")
     # ### end Alembic commands ###
+    # drop_table não remove os tipos enum criados junto com as tabelas
+    for enum_name in ("category", "transactiontype", "status"):
+        sa.Enum(name=enum_name).drop(op.get_bind(), checkfirst=True)

@@ -1,9 +1,12 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from fastapi import HTTPException
 from httpx import AsyncClient
 
 from bank_analyzer.core.config import settings
+from bank_analyzer.models.user import User
+from bank_analyzer.services.statement import create_statement
 
 
 @pytest.fixture(autouse=True)
@@ -79,3 +82,37 @@ async def test_get_analysis_forbidden_for_other_user(client: AsyncClient):
     )
 
     assert response.status_code == 404
+
+
+async def test_upload_same_file_twice_returns_same_statement(
+    client: AsyncClient, auth_token: str, storage_dir
+):
+    headers = {"Authorization": f"Bearer {auth_token}"}
+    files = {"file": ("test.pdf", b"same content", "application/pdf")}
+
+    with patch(
+        "bank_analyzer.api.statements.process_statement", new_callable=AsyncMock
+    ):
+        first = await client.post("/statements/upload", files=files, headers=headers)
+        second = await client.post("/statements/upload", files=files, headers=headers)
+
+    assert first.json()["id"] == second.json()["id"]
+    assert len(list(storage_dir.rglob("*.pdf"))) == 1
+
+
+async def test_duplicate_statement_is_rejected_by_database(session):
+    # simula dois uploads simultâneos que passaram pela checagem da aplicação
+    user = User(email="race@email.com", hashed_password="hash")
+    session.add(user)
+    await session.commit()
+
+    await create_statement(
+        session, str(user.id), "a.pdf", file_path="a", file_hash="same-hash"
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await create_statement(
+            session, str(user.id), "b.pdf", file_path="b", file_hash="same-hash"
+        )
+
+    assert exc_info.value.status_code == 409

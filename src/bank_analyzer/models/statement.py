@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import UUID, ForeignKey, func
+from sqlalchemy import UUID, ForeignKey, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from bank_analyzer.core.base import Base
@@ -16,6 +16,10 @@ if TYPE_CHECKING:
 
 class Statement(Base):
     __tablename__ = "statements"
+    # o mesmo PDF não entra duas vezes para o mesmo usuário (idempotência do upload)
+    __table_args__ = (
+        UniqueConstraint("user_id", "file_hash", name="uq_statements_user_file_hash"),
+    )
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), default_factory=uuid.uuid4, primary_key=True, init=False
     )
