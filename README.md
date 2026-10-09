@@ -1,5 +1,7 @@
 # Bank Analyzer
 
+[![CI](https://github.com/Iankyoo/bank-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/Iankyoo/bank-analyzer/actions/workflows/ci.yml)
+
 API REST que lê um extrato bancário em PDF, extrai e categoriza as transações com IA e devolve uma análise financeira do mês. Construída para aprender backend moderno em Python resolvendo um problema real: entender para onde meu dinheiro vai.
 
 ## O que faz
@@ -90,6 +92,9 @@ Este é um projeto de estudo que roda localmente, em um único processo. As limi
 - Sem fila: se o processo cair durante o processamento, o extrato fica `pending` e não há reprocessamento.
 - A resposta do LLM na extração (datas, valores, tipo) não é validada antes de entrar no banco; um campo malformado leva o extrato inteiro para `error`.
 - A API não tem endpoint de listagem de extratos (só o dashboard); o status de um extrato aparece na resposta da análise.
+- A categorização em lote associa a resposta do Gemini a cada transação pela descrição; se o modelo reescrever uma descrição, aquela transação cai em `other`.
+- O typecheck (mypy em modo strict) não roda no CI: as anotações de tipo ainda estão incompletas.
+- Sem endpoint de health check; o `HEALTHCHECK` do Dockerfile usa `/docs`.
 - Não há deploy público.
 
 ## Estrutura

@@ -10,7 +10,7 @@ from bank_analyzer.core.limiter import limiter
 app = FastAPI(
     title="Bank Analyzer API",
     description="Intelligent bank statement analyzer with AI categorization",
-    version="0.1.0",
+    version="1.0.0",
 )
 
 app.state.limiter = limiter

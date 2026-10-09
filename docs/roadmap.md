@@ -2,6 +2,8 @@
 
 Plano de trabalho da v1.0 e registro consciente da dívida técnica.
 
+> **Status: v1.0 fechada.** Concluídas: #8, #9, #10, #11, #12, #13, #16, #17, #18, #21 e #23. As issues #14, #15, #19, #20 e #22 foram encerradas como dívida técnica documentada; as limitações que elas descrevem estão listadas no README.
+
 Este documento existe por dois motivos: manter o escopo fechado enquanto a dívida é paga, e deixar explícito o que **não** está no projeto e por quê. A segunda parte é tão importante quanto a primeira — um projeto que não sabe onde termina não consegue ser explicado de ponta a ponta.
 
 ---
