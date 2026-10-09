@@ -29,9 +29,9 @@ async def upload(
     file: UploadFile,
     background_tasks: BackgroundTasks,
 ):
-    validate_pdf_upload(file)
-
     contents = await file.read()
+    validate_pdf_upload(file.filename, contents)
+
     file_hash = calculate_file_hash(contents)
 
     existing = await get_statement_by_hash(session, str(user.id), file_hash)

@@ -21,7 +21,7 @@ async def test_upload_statement(client: AsyncClient, auth_token: str, storage_di
     ):
         response = await client.post(
             "/statements/upload",
-            files={"file": ("test.pdf", b"fake pdf content", "application/pdf")},
+            files={"file": ("test.pdf", b"%PDF-1.4 fake", "application/pdf")},
             headers={"Authorization": f"Bearer {auth_token}"},
         )
 
@@ -32,7 +32,7 @@ async def test_upload_statement(client: AsyncClient, auth_token: str, storage_di
 
     saved_files = list(storage_dir.rglob("*.pdf"))
     assert len(saved_files) == 1
-    assert saved_files[0].read_bytes() == b"fake pdf content"
+    assert saved_files[0].read_bytes() == b"%PDF-1.4 fake"
 
 
 async def test_upload_invalid_file_type(client: AsyncClient, auth_token: str):
@@ -61,7 +61,7 @@ async def test_get_analysis_forbidden_for_other_user(client: AsyncClient):
     ):
         upload_response = await client.post(
             "/statements/upload",
-            files={"file": ("test.pdf", b"fake pdf content", "application/pdf")},
+            files={"file": ("test.pdf", b"%PDF-1.4 fake", "application/pdf")},
             headers={"Authorization": f"Bearer {token_a}"},
         )
     statement_id = upload_response.json()["id"]
@@ -88,7 +88,7 @@ async def test_upload_same_file_twice_returns_same_statement(
     client: AsyncClient, auth_token: str, storage_dir
 ):
     headers = {"Authorization": f"Bearer {auth_token}"}
-    files = {"file": ("test.pdf", b"same content", "application/pdf")}
+    files = {"file": ("test.pdf", b"%PDF-1.4 same content", "application/pdf")}
 
     with patch(
         "bank_analyzer.api.statements.process_statement", new_callable=AsyncMock
