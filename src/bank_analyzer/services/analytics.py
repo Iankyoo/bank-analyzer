@@ -11,6 +11,8 @@ from bank_analyzer.models.statement import Statement
 from bank_analyzer.models.transaction import Transaction
 from bank_analyzer.schemas.analytics import StatementAnalysis
 
+CENTS = Decimal("0.01")
+
 
 async def get_owned_statement(
     statement_id: str, user_id: str, session: AsyncSession
@@ -79,7 +81,9 @@ def calculate_category_metrics(transactions: list[Transaction]) -> dict:
 
     # ticket médio
     average_transaction_value = (
-        (sum(t.amount for t in debits) / len(debits)) if debits else Decimal(0)
+        (sum(t.amount for t in debits) / len(debits)).quantize(CENTS)
+        if debits
+        else Decimal(0)
     )
 
     return {
@@ -109,7 +113,7 @@ def detect_anomalies(transactions: list[Transaction]) -> list[dict]:
         category_totals[key].append(t.amount)
 
     category_averages = {
-        category: sum(amounts) / len(amounts)
+        category: (sum(amounts) / len(amounts)).quantize(CENTS)
         for category, amounts in category_totals.items()
     }
 

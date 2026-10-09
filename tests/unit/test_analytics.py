@@ -60,13 +60,14 @@ def test_calculate_category_metrics():
         "food": Decimal("600"),
         "housing": Decimal("500"),
     }
-    assert round(result["average_transaction_value"], 2) == Decimal("366.67")
+    # valores monetários saem arredondados em centavos, não com 28 casas
+    assert result["average_transaction_value"] == Decimal("366.67")
 
 
 def test_detect_anomalies():
     transactions = [
-        make_transaction(50, TransactionType.DEBIT, Category.FOOD),
-        make_transaction(50, TransactionType.DEBIT, Category.FOOD),
+        make_transaction(10, TransactionType.DEBIT, Category.FOOD),
+        make_transaction(20, TransactionType.DEBIT, Category.FOOD),
         make_transaction(500, TransactionType.DEBIT, Category.FOOD),
     ]
 
@@ -76,3 +77,5 @@ def test_detect_anomalies():
     assert result[0]["description"] == transactions[2].description
     assert result[0]["amount"] == Decimal("500")
     assert result[0]["category"] == "food"
+    # média 176.666..., arredondada em centavos
+    assert result[0]["average_for_category"] == Decimal("176.67")
