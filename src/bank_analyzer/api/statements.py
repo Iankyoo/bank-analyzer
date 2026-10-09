@@ -1,3 +1,4 @@
+import asyncio
 from http import HTTPStatus
 from typing import Annotated
 
@@ -37,7 +38,7 @@ async def upload(
     if existing:
         return existing
 
-    file_path = save_file(contents=contents, user_id=str(user.id))
+    file_path = await asyncio.to_thread(save_file, contents, str(user.id))
     statement = await create_statement(
         session=session,
         filename=file.filename,

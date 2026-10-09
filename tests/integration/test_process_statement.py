@@ -1,3 +1,5 @@
+import asyncio
+import time
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -47,7 +49,7 @@ async def statement(session):
     return statement
 
 
-def pipeline_mocks(insight):
+def pipeline_mocks(insight, extract=None):
     """Mocka tudo que é externo: leitura do PDF e chamadas ao Gemini."""
     return (
         patch("bank_analyzer.services.parser.SessionLocal", SessionTest),
@@ -57,7 +59,7 @@ def pipeline_mocks(insight):
         ),
         patch(
             "bank_analyzer.services.parser.extract_transactions",
-            return_value=[dict(t) for t in EXTRACTED],
+            **(extract or {"return_value": [dict(t) for t in EXTRACTED]}),
         ),
         patch(
             "bank_analyzer.services.categorizer.embed_descriptions",
@@ -71,8 +73,8 @@ def pipeline_mocks(insight):
     )
 
 
-async def run_pipeline(statement, insight):
-    mocks = pipeline_mocks(insight)
+async def run_pipeline(statement, insight, extract=None):
+    mocks = pipeline_mocks(insight, extract)
     for m in mocks:
         m.start()
     try:
@@ -120,3 +122,25 @@ async def test_insight_failure_keeps_statement_completed(session, statement):
     await session.refresh(statement)
     assert statement.status == Status.COMPLETED
     assert statement.ai_insight is None
+
+
+async def test_processing_does_not_block_event_loop(session, statement):
+    def slow_extract(text):
+        time.sleep(0.5)  # simula a chamada síncrona ao Gemini
+        return [dict(t) for t in EXTRACTED]
+
+    ticks = 0
+
+    async def ticker():
+        # representa as outras requisições que a API atende enquanto processa
+        nonlocal ticks
+        while True:
+            await asyncio.sleep(0.05)
+            ticks += 1
+
+    task = asyncio.create_task(ticker())
+    await run_pipeline(statement, {"return_value": "ok"}, {"side_effect": slow_extract})
+    task.cancel()
+
+    # se a extração bloqueasse o loop, o ticker ficaria parado durante os 0.5s
+    assert ticks >= 8

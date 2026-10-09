@@ -1,3 +1,4 @@
+import asyncio
 import io
 import logging
 from datetime import date
@@ -29,15 +30,21 @@ def extract_text_from_pdf(file_obj: io.BytesIO) -> str:
     with pdfplumber.open(file_obj) as pdf:
         text = ""
         for page in pdf.pages:
-            text += page.extract_text()
+            # páginas escaneadas (só imagem) não têm texto e retornam None
+            text += page.extract_text() or ""
     return text
 
 
-def generate_statement_insight(transactions: list[Transaction]) -> str | None:
+def read_statement_text(file_path: str) -> str:
+    return extract_text_from_pdf(read_pdf(file_path))
+
+
+async def generate_statement_insight(transactions: list[Transaction]) -> str | None:
+    metrics = calculate_metrics(transactions)
     # o insight é complementar: se o Gemini falhar aqui, o extrato continua
     # válido com todas as métricas, só sem o texto
     try:
-        return generate_insight(calculate_metrics(transactions))
+        return await asyncio.to_thread(generate_insight, metrics)
     except Exception:
         logger.exception("Falha ao gerar insight; extrato salvo sem insight")
         return None
@@ -57,9 +64,10 @@ async def process_statement(statement_id: str, file_path: str) -> None:
             statement.status = Status.PROCESSING
             await session.commit()
 
-            file_obj = read_pdf(file_path)
-            text = extract_text_from_pdf(file_obj)
-            transactions = extract_transactions(text)
+            # leitura do PDF e chamadas ao Gemini são síncronas (bloqueantes):
+            # rodam em uma thread para não travar o event loop da API
+            text = await asyncio.to_thread(read_statement_text, file_path)
+            transactions = await asyncio.to_thread(extract_transactions, text)
             await categorize_transactions(session, statement.user_id, transactions)
 
             new_transactions = [
@@ -75,7 +83,7 @@ async def process_statement(statement_id: str, file_path: str) -> None:
             ]
             session.add_all(new_transactions)
 
-            statement.ai_insight = generate_statement_insight(new_transactions)
+            statement.ai_insight = await generate_statement_insight(new_transactions)
             statement.status = Status.COMPLETED
             await session.commit()
 

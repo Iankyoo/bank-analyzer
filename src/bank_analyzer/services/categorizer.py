@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 
@@ -92,7 +93,8 @@ async def categorize_transactions(
     if not transactions:
         return
 
-    vectors = embed_descriptions([t["description"] for t in transactions])
+    descriptions = [t["description"] for t in transactions]
+    vectors = await asyncio.to_thread(embed_descriptions, descriptions)
 
     unknown = []
     for t, vector in zip(transactions, vectors):
@@ -105,7 +107,9 @@ async def categorize_transactions(
     if not unknown:
         return
 
-    categories = categorize_batch_with_gemini([t for t, _ in unknown])
+    categories = await asyncio.to_thread(
+        categorize_batch_with_gemini, [t for t, _ in unknown]
+    )
     saved = set()
     for t, vector in unknown:
         t["category"] = to_category(categories.get(t["description"]))
