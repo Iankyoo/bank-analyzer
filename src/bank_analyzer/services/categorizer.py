@@ -45,41 +45,55 @@ prompt_categorize_batch = PromptTemplate(
     template="""Você é um analisador de extratos bancários.
 Categorize cada transação abaixo e retorne APENAS um JSON válido.
 
-Transações:
+Transações (numeradas):
 {transactions}
 
 Para cada transação, retorne um objeto com:
-- description: a descrição original
-- category: 
-    uma das opções:
-        food, transport, health, housing, leisure, education, salary, investments, other
+- index: o número da transação na lista acima
+- category: uma das opções:
+    food, transport, health, housing, leisure, education, salary, investments, other
 
 Regras:
+- Retorne um objeto para cada número da lista, sem pular nenhum
 - Use "salary" apenas para transações de CREDIT que representam renda de trabalho
 - Use "investments" para rendimentos e aplicações financeiras
 - Retorne APENAS o JSON, sem markdown, sem explicações
 
 Formato esperado:
-[{{"description": "...", "category": "..."}}]""",
+[{{"index": 1, "category": "..."}}]""",
     input_variables=["transactions"],
 )
 
 
-def categorize_batch_with_gemini(transactions: list) -> dict:
-    tx_list = "\n".join(
-        [f"- {t['description']} ({t['transaction_type']})" for t in transactions]
-    )
-    chain = prompt_categorize_batch | model | JsonOutputParser()
-    results = chain.invoke({"transactions": tx_list})
-    return {r["description"]: r["category"] for r in results}
-
-
-def to_category(value: str | None) -> Category:
-    # o LLM pode devolver uma categoria fora da lista; nesse caso vira "other"
+def parse_category(value: object) -> Category | None:
     try:
         return Category(value)
     except ValueError:
-        return Category.OTHER
+        return None
+
+
+def categorize_batch_with_gemini(transactions: list) -> list[Category | None]:
+    """Uma categoria por transação, na mesma ordem; None se o modelo não
+    devolveu uma categoria válida para ela."""
+    # a resposta é casada pelo índice, não pela descrição: o modelo às vezes
+    # devolve a descrição reescrita (ex.: com " (debit)" no fim) e ela deixa
+    # de bater com a original
+    tx_list = "\n".join(
+        f"{i}. {t['description']} ({t['transaction_type']})"
+        for i, t in enumerate(transactions, start=1)
+    )
+    chain = prompt_categorize_batch | model | JsonOutputParser()
+    results = chain.invoke({"transactions": tx_list})
+
+    categories: list[Category | None] = [None] * len(transactions)
+    for r in results if isinstance(results, list) else []:
+        try:
+            index = int(r["index"])
+        except (TypeError, KeyError, ValueError):
+            continue
+        if 1 <= index <= len(transactions):
+            categories[index - 1] = parse_category(r.get("category"))
+    return categories
 
 
 def extract_transactions(text: str) -> list:
@@ -111,8 +125,15 @@ async def categorize_transactions(
         categorize_batch_with_gemini, [t for t, _ in unknown]
     )
     saved = set()
-    for t, vector in unknown:
-        t["category"] = to_category(categories.get(t["description"]))
+    for (t, vector), category in zip(unknown, categories):
+        if category is None:
+            # sem resposta válida do modelo: entra como "other", mas fica fora da
+            # memória para não ensinar uma categoria errada aos próximos extratos
+            logger.warning("Sem categoria para %r; usando other", t["description"])
+            t["category"] = Category.OTHER
+            continue
+
+        t["category"] = category
         if t["description"] not in saved:
-            save_embedding(session, user_id, t["description"], t["category"], vector)
+            save_embedding(session, user_id, t["description"], category, vector)
             saved.add(t["description"])

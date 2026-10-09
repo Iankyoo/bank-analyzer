@@ -67,7 +67,7 @@ def pipeline_mocks(insight, extract=None):
         ),
         patch(
             "bank_analyzer.services.categorizer.categorize_batch_with_gemini",
-            return_value={"Salario": "salary", "Aluguel": "housing"},
+            return_value=[Category.SALARY, Category.HOUSING],
         ),
         patch("bank_analyzer.services.parser.generate_insight", **insight),
     )

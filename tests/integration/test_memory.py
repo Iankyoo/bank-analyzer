@@ -73,7 +73,7 @@ async def test_categorize_transactions_uses_memory_before_gemini(session, user):
         ),
         patch(
             "bank_analyzer.services.categorizer.categorize_batch_with_gemini",
-            return_value={"Uber Trip": "transport"},
+            return_value=[Category.TRANSPORT],
         ) as mock_gemini,
     ):
         await categorize_transactions(session, user.id, transactions)
@@ -89,7 +89,9 @@ async def test_categorize_transactions_uses_memory_before_gemini(session, user):
     assert {row.description for row in saved} == {"iFood Almoco", "Uber Trip"}
 
 
-async def test_categorize_transactions_invalid_category_becomes_other(session, user):
+async def test_uncategorized_transaction_becomes_other_and_stays_out_of_memory(
+    session, user
+):
     transactions = [{"description": "Compra X", "transaction_type": "debit"}]
 
     with (
@@ -99,9 +101,13 @@ async def test_categorize_transactions_invalid_category_becomes_other(session, u
         ),
         patch(
             "bank_analyzer.services.categorizer.categorize_batch_with_gemini",
-            return_value={"Compra X": "categoria-inventada"},
+            return_value=[None],
         ),
     ):
         await categorize_transactions(session, user.id, transactions)
+        await session.commit()
 
     assert transactions[0]["category"] == Category.OTHER
+    # um "other" por falta de resposta não pode virar memória
+    saved = (await session.execute(select(TransactionEmbedding))).all()
+    assert saved == []
