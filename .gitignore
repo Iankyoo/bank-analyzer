@@ -8,6 +8,5 @@ __pycache__/
 .vscode/
 .coverage
 htmlcov/
-chroma_db/
 storage/
 .claude/

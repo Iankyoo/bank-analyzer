@@ -1,13 +1,17 @@
 import logging
+import uuid
 
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from bank_analyzer.core.config import settings
+from bank_analyzer.core.enums import Category
 from bank_analyzer.services.memory import (
-    find_similar_transaction,
-    save_transaction_embedding,
+    embed_descriptions,
+    find_similar_category,
+    save_embedding,
 )
 
 model = ChatGoogleGenerativeAI(
@@ -69,27 +73,42 @@ def categorize_batch_with_gemini(transactions: list) -> dict:
     return {r["description"]: r["category"] for r in results}
 
 
-def parse_transactions(text: str) -> list:
+def to_category(value: str | None) -> Category:
+    # o LLM pode devolver uma categoria fora da lista; nesse caso vira "other"
+    try:
+        return Category(value)
+    except ValueError:
+        return Category.OTHER
+
+
+def extract_transactions(text: str) -> list:
     chain = prompt_extract | model | parser
-    transactions = chain.invoke({"text": text})
+    return chain.invoke({"text": text})
+
+
+async def categorize_transactions(
+    session: AsyncSession, user_id: uuid.UUID, transactions: list
+) -> None:
+    if not transactions:
+        return
+
+    vectors = embed_descriptions([t["description"] for t in transactions])
 
     unknown = []
-    for t in transactions:
-        category = find_similar_transaction(t["description"])
+    for t, vector in zip(transactions, vectors):
+        category = await find_similar_category(session, user_id, vector)
         if category:
             t["category"] = category
         else:
-            unknown.append(t)
+            unknown.append((t, vector))
 
-    if unknown:
-        categories = categorize_batch_with_gemini(unknown)
-        for t in unknown:
-            category = categories.get(t["description"], "other")
-            t["category"] = category
-            save_transaction_embedding(
-                id=f"{t['date']}-{t['description']}",
-                description=t["description"],
-                category=category,
-            )
+    if not unknown:
+        return
 
-    return transactions
+    categories = categorize_batch_with_gemini([t for t, _ in unknown])
+    saved = set()
+    for t, vector in unknown:
+        t["category"] = to_category(categories.get(t["description"]))
+        if t["description"] not in saved:
+            save_embedding(session, user_id, t["description"], t["category"], vector)
+            saved.add(t["description"])

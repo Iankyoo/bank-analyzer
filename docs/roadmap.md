@@ -21,7 +21,7 @@ O plano AWS expirou e o projeto passou a rodar apenas localmente. Isso não foi 
 | Feature | Decisão | Motivo |
 |---|---|---|
 | **S3 / boto3** | Remover | Sem AWS vira só custo: 4 variáveis de ambiente, uma dependência pesada e mock em todo teste de upload. Trocar por disco local mantendo `storage.py` como camada preserva o ponto que interessa — a interface está isolada, e trocar de volta custa uma função |
-| **ChromaDB** | Manter | É o diferencial do projeto. A crítica principal (memória efêmera no Fargate) **deixa de existir** rodando local: persistência em disco passa a ser a escolha certa, não um erro. Restam dois bugs baratos, tratados na Fase 1 |
+| **ChromaDB** | Trocar por pgvector | Decisão revista depois do plano original: o Chroma exigia um segundo banco sem transação conjunta com o Postgres, não isolava usuários e gerava um embedding por chamada. O pgvector resolve os três no banco que já existe, e ainda remove duas dependências |
 | **Dashboard Jinja2** | Manter | 240 linhas e é o único artefato visual. O problema dele é ~1h de trabalho (uma dependency compartilhada). Cortar economizaria pouco e custaria a demonstração |
 
 ---
@@ -92,14 +92,6 @@ Nada aqui é esquecimento. Cada item foi avaliado e deixado de fora por um motiv
 
 **O que eu faria:** ARQ ou Celery com Redis, estado do job no banco, retry com backoff exponencial e um endpoint de reprocessamento manual.
 
-### ChromaDB local, não pgvector
-
-**Por que ficou de fora:** com um único processo e um único disco, o Chroma persistente resolve. Trocar de banco vetorial no meio da correção de dívida seria inflar escopo por elegância.
-
-**Limitação real:** memória em processo separado do Postgres, sem transação conjunta. Se o statement for revertido, os embeddings gravados permanecem.
-
-**O que eu faria:** pgvector no mesmo Postgres, com os embeddings escritos na mesma transação das transações — o que elimina a inconsistência e um serviço da stack.
-
 ### Armazenamento em disco, não object storage
 
 **Por que ficou de fora:** o plano AWS expirou. Manter a integração pelo símbolo seria manter dependência e configuração sem uso.
@@ -148,4 +140,4 @@ Nada aqui é esquecimento. Cada item foi avaliado e deixado de fora por um motiv
 
 ## Depois da v1.0
 
-A lista acima não é para ser resolvida neste repositório. Fila de tarefas real, memória vetorial no Postgres, multi-tenant e observabilidade formam o escopo de um **projeto seguinte**, com ambição maior — e não um remendo neste, cujo valor está em ser inteiramente explicável por quem o escreveu.
+A lista acima não é para ser resolvida neste repositório. Fila de tarefas real, multi-tenant e observabilidade formam o escopo de um **projeto seguinte**, com ambição maior — e não um remendo neste, cujo valor está em ser inteiramente explicável por quem o escreveu.

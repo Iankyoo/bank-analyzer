@@ -3,6 +3,7 @@ import sys
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from bank_analyzer.core.base import Base
@@ -21,6 +22,7 @@ SessionTest = async_sessionmaker(bind=engine_test, expire_on_commit=False)
 @pytest_asyncio.fixture()
 async def setup_db():
     async with engine_test.begin() as conn:
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with engine_test.begin() as conn:

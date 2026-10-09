@@ -5,10 +5,13 @@ import pdfplumber
 from sqlalchemy import select
 
 from bank_analyzer.core.database import SessionLocal
-from bank_analyzer.core.enums import Category, Status, TransactionType
+from bank_analyzer.core.enums import Status, TransactionType
 from bank_analyzer.models.statement import Statement
 from bank_analyzer.models.transaction import Transaction
-from bank_analyzer.services.categorizer import parse_transactions
+from bank_analyzer.services.categorizer import (
+    categorize_transactions,
+    extract_transactions,
+)
 from bank_analyzer.services.storage import read_file
 
 logger = logging.getLogger(__name__)
@@ -42,7 +45,8 @@ async def process_statement(statement_id: str, file_path: str) -> None:
 
             file_obj = read_pdf(file_path)
             text = extract_text_from_pdf(file_obj)
-            transactions = parse_transactions(text)
+            transactions = extract_transactions(text)
+            await categorize_transactions(session, statement.user_id, transactions)
 
             for t in transactions:
                 transaction = Transaction(
@@ -51,7 +55,7 @@ async def process_statement(statement_id: str, file_path: str) -> None:
                     description=t["description"],
                     amount=t["amount"],
                     transaction_type=TransactionType(t["transaction_type"]),
-                    category=Category(t["category"]),
+                    category=t["category"],
                 )
                 session.add(transaction)
 
