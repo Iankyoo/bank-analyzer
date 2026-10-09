@@ -1,0 +1,49 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 1007 >>
+stream
+BT /F1 10 Tf 40 800 Td 14 TL
+(BANCO EXEMPLO S.A. - EXTRATO DE CONTA CORRENTE) Tj T*
+(Cliente: Fulano de Tal   Periodo: JULHO/2026) Tj T*
+() Tj T*
+(DATA        DESCRICAO                         VALOR \(R$\)) Tj T*
+(01/07/2026  Salario Empresa Exemplo Ltda        +5.200,00) Tj T*
+(02/07/2026  Aluguel Julho                       -1.800,00) Tj T*
+(03/07/2026  Supermercado Extra                    -412,35) Tj T*
+(05/07/2026  iFood *Restaurante Sabor               -58,90) Tj T*
+(06/07/2026  Uber Trip                              -23,40) Tj T*
+(08/07/2026  Netflix.com                            -55,90) Tj T*
+(10/07/2026  Drogaria Sao Paulo                     -87,10) Tj T*
+(12/07/2026  Posto Shell                           -210,00) Tj T*
+(15/07/2026  iFood *Pizzaria Bella                  -72,50) Tj T*
+(20/07/2026  Mensalidade Faculdade                 -890,00) Tj T*
+(22/07/2026  Supermercado Extra                    -298,70) Tj T*
+(25/07/2026  Rendimento Poupanca                    +18,42) Tj T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000001300 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1368
+%%EOF

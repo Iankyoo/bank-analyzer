@@ -4,6 +4,8 @@
 
 API REST que lê um extrato bancário em PDF, extrai e categoriza as transações com IA e devolve uma análise financeira do mês. Construída para aprender backend moderno em Python resolvendo um problema real: entender para onde meu dinheiro vai.
 
+![Dashboard com a análise de um extrato](docs/dashboard.png)
+
 ## O que faz
 
 1. O usuário faz upload do extrato em PDF.
@@ -21,6 +23,22 @@ API REST que lê um extrato bancário em PDF, extrai e categoriza as transaçõe
 - **Jinja2** para o dashboard
 - JWT (PyJWT) + Argon2 (pwdlib) para autenticação, **slowapi** para rate limiting
 - Poetry, Docker, pytest, ruff, mypy
+
+## Modelo de dados
+
+```mermaid
+erDiagram
+    User ||--o{ Statement : envia
+    Statement ||--o{ Transaction : contem
+    User ||--o{ TransactionEmbedding : "memoria de"
+```
+
+| Entidade | O que representa |
+|---|---|
+| `User` | Usuário, com email único e senha com hash Argon2 |
+| `Statement` | Extrato enviado: arquivo, hash SHA-256, status do processamento e insight gerado. `UNIQUE(user_id, file_hash)` garante a idempotência |
+| `Transaction` | Transação extraída do extrato: data, descrição, valor, tipo (crédito ou débito) e categoria |
+| `TransactionEmbedding` | Memória semântica: embedding `vector(768)` da descrição e a categoria, por usuário |
 
 ## Decisões técnicas
 
@@ -62,7 +80,15 @@ poetry run task run
 
 Todas as variáveis estão descritas em [.env.example](.env.example).
 
+Para testar sem usar um extrato real, há três extratos fictícios em [examples/](examples/). Envie pelo Swagger (`POST /statements/upload`, depois de autenticar em **Authorize**) e acompanhe pelo dashboard.
+
+Cada extrato usa 3 chamadas ao modelo do Gemini (extração, categorização e insight) e 1 à API de embeddings. O plano gratuito tem limite diário de requisições por modelo; se ele acabar, o extrato fica com status `error` (ou completo sem insight, se a falha for só no insight).
+
+![Lista de extratos no dashboard](docs/statements.png)
+
 ## Endpoints
+
+![Swagger da API](docs/swagger.png)
 
 | Método | Rota | Descrição |
 |---|---|---|
@@ -92,7 +118,6 @@ Este é um projeto de estudo que roda localmente, em um único processo. As limi
 - Sem fila: se o processo cair durante o processamento, o extrato fica `pending` e não há reprocessamento.
 - A resposta do LLM na extração (datas, valores, tipo) não é validada antes de entrar no banco; um campo malformado leva o extrato inteiro para `error`.
 - A API não tem endpoint de listagem de extratos (só o dashboard); o status de um extrato aparece na resposta da análise.
-- A categorização em lote associa a resposta do Gemini a cada transação pela descrição; se o modelo reescrever uma descrição, aquela transação cai em `other`.
 - O typecheck (mypy em modo strict) não roda no CI: as anotações de tipo ainda estão incompletas.
 - Sem endpoint de health check; o `HEALTHCHECK` do Dockerfile usa `/docs`.
 - Não há deploy público.
@@ -109,4 +134,6 @@ src/bank_analyzer/
 └── templates/   # HTML do dashboard
 migrations/      # Alembic
 tests/           # unit/ e integration/
+examples/        # extratos fictícios para testar
+docs/            # roadmap e imagens do README
 ```
