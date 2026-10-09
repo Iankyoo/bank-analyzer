@@ -1,90 +1,104 @@
 # Bank Analyzer
 
-API REST para análise inteligente de extratos bancários com IA. Construída para aprender desenvolvimento backend moderno em Python enquanto resolvo um problema real: entender para onde meu dinheiro vai todo mês.
+API REST que lê um extrato bancário em PDF, extrai e categoriza as transações com IA e devolve uma análise financeira do mês. Construída para aprender backend moderno em Python resolvendo um problema real: entender para onde meu dinheiro vai.
 
 ## O que faz
 
-Você faz upload de um extrato bancário em PDF. A API extrai as transações, categoriza cada uma usando Gemini (em lote, não uma chamada por transação), detecta gastos fora do padrão e gera um insight financeiro personalizado. Tem um dashboard web para visualizar tudo isso.
+1. O usuário faz upload do extrato em PDF.
+2. O texto é extraído com `pdfplumber` e o Gemini transforma o texto em transações estruturadas.
+3. Cada transação é categorizada: primeiro por similaridade com transações já vistas (ChromaDB); só as desconhecidas vão para o Gemini, todas em uma única chamada.
+4. A análise calcula receita, despesas, taxa de economia, gasto por categoria, ticket médio e transações fora do padrão, e o Gemini escreve um insight em texto.
+5. O resultado sai em JSON pela API e em um dashboard web simples.
 
 ## Stack
 
-- **FastAPI** + SQLAlchemy 2.0 async + PostgreSQL
-- **Gemini** para categorização e geração de insights
-- **ChromaDB** com embeddings para memória semântica — transações similares já categorizadas não precisam chamar o Gemini novamente
-- **AWS S3** para armazenar os PDFs, **ECS Fargate** + **RDS** em produção
-- **Jinja2** para o dashboard web
-- Docker, Alembic, Poetry
+- **FastAPI** + **SQLAlchemy 2.0 async** + **PostgreSQL** (psycopg 3)
+- **Alembic** para migrations
+- **Gemini** via LangChain para extração, categorização e insight
+- **ChromaDB** com embeddings do Gemini como memória semântica local
+- **Jinja2** para o dashboard
+- JWT (PyJWT) + Argon2 (pwdlib) para autenticação, **slowapi** para rate limiting
+- Poetry, Docker, pytest, ruff, mypy
 
-## Decisões técnicas relevantes
+## Decisões técnicas
 
-**Categorização em lote:** em vez de chamar o Gemini N vezes (uma por transação), monto um prompt com todas as transações desconhecidas e faço uma única chamada. Reduziu de ~26 chamadas para 2 por extrato.
+**Categorização em lote.** Em vez de uma chamada ao Gemini por transação, as transações desconhecidas vão juntas em um único prompt. Um extrato que gerava ~26 chamadas passou a gerar 2 (extração + categorização).
 
-**ChromaDB como memória:** transações similares às já processadas são categorizadas localmente via busca semântica, sem custo de API. Útil para transações ambíguas que sempre aparecem (ex: "PIX João" — pode ser qualquer coisa).
+**Memória semântica com ChromaDB.** Descrições parecidas com transações já categorizadas reaproveitam a categoria sem chamar a API. A busca só é aceita abaixo de uma distância máxima (`CHROMA_DISTANCE_THRESHOLD`), para que uma correspondência fraca não contamine a categoria.
 
-**Idempotência por hash SHA256:** o mesmo PDF enviado duas vezes retorna o statement existente sem reprocessar.
+**Idempotência por hash.** O SHA-256 do PDF é guardado no upload; o mesmo arquivo enviado de novo pelo mesmo usuário retorna o extrato existente sem reprocessar.
 
-**Async desde o início:** FastAPI + SQLAlchemy 2.0 + psycopg, tudo async. Evita refatoração dolorosa depois.
+**Processamento em background.** O upload responde na hora com status `pending`; a extração e a categorização rodam em `BackgroundTasks`, e o status passa por `processing` até `completed` ou `error`.
 
-**Rate limiting na autenticação:** `/auth/register`, `/auth/token` e o `/login` do dashboard são limitados a 5 requisições/minuto por IP (via slowapi), para dificultar força bruta e spam de registro.
+**Armazenamento isolado em uma camada.** Os PDFs ficam em disco local, mas todo acesso passa por `services/storage.py`. O projeto já usou S3; voltar para object storage é trocar duas funções.
+
+**Segurança.** Cada consulta de análise filtra pelo dono do extrato (sem IDOR), o cookie do dashboard é `HttpOnly` + `Secure` + `SameSite=Lax`, e os endpoints de login e registro são limitados a 5 requisições por minuto por IP.
 
 ## Rodando localmente
+
+Pré-requisitos: Python 3.13+, Poetry, Docker e uma chave da API do Gemini.
 
 ```bash
 git clone https://github.com/Iankyoo/bank-analyzer
 cd bank-analyzer
 
-# dependências
+cp .env.example .env        # preencha GEMINI_API_KEY e SECRET_KEY
 poetry install
-
-# sobe os bancos
-docker-compose up -d
-
-# migrations
-alembic upgrade head
-
-# inicia
-task run
+docker compose up -d db     # PostgreSQL na porta 5432
+poetry run alembic upgrade head
+poetry run task run
 ```
 
-Acesse `http://localhost:8000/docs` para a API ou `http://localhost:8000/login` para o dashboard.
+- API e documentação interativa: http://localhost:8000/docs
+- Dashboard: http://localhost:8000/login
 
-### Variáveis de ambiente (.env)
+Todas as variáveis estão descritas em [.env.example](.env.example).
 
-```env
-DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/bank_analyzer
-SECRET_KEY=sua_secret_key
-ALGORITHM=HS256
-TOKEN_EXPIRE_IN_MINUTES=30
-GEMINI_API_KEY=sua_chave
-GEMINI_MODEL=gemini-2.0-flash
-AWS_ACCESS_KEY_ID=sua_chave
-AWS_SECRET_ACCESS_KEY=sua_secret
-AWS_BUCKET_NAME=seu_bucket
-AWS_REGION=sa-east-1
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=bank_analyzer
-TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5433/bank_analyzer_test
-CHROMA_DISTANCE_THRESHOLD=0.35  # opcional, distância máxima do ChromaDB para reaproveitar uma categoria já vista
-```
-
-## Endpoints principais
+## Endpoints
 
 | Método | Rota | Descrição |
-|--------|------|-----------|
+|---|---|---|
 | POST | `/auth/register` | Cria usuário |
 | POST | `/auth/token` | Login, retorna JWT |
-| POST | `/statements/upload` | Upload de PDF |
-| GET | `/statements/{id}/analysis` | Análise em JSON |
-| GET | `/dashboard/{id}` | Dashboard web |
+| POST | `/statements/upload` | Upload do PDF (processado em background) |
+| GET | `/statements/{id}/analysis` | Análise do extrato em JSON |
+| GET | `/login` | Login do dashboard |
+| GET | `/statements` | Lista de extratos (dashboard) |
+| GET | `/dashboard/{id}` | Análise do extrato (dashboard) |
 
 ## Testes
 
-Os testes de integração precisam de um banco de testes rodando:
+Os testes de integração usam um PostgreSQL separado, na porta 5433:
 
 ```bash
-docker-compose up -d db_test
-task test
+docker compose up -d db_test
+poetry run task test
 ```
 
-83% de cobertura com testes unitários e de integração. S3 e Gemini são mockados nos testes.
+32 testes unitários e de integração, 82% de cobertura. O Gemini e o ChromaDB são mockados; nenhum teste chama API externa.
+
+## Limitações conhecidas
+
+Este é um projeto de estudo que roda localmente, em um único processo. As limitações abaixo são conhecidas e estão registradas, com o que eu faria em cada caso, em [docs/roadmap.md](docs/roadmap.md):
+
+- O insight é gerado pelo Gemini a cada consulta da análise, em vez de uma vez no processamento.
+- O processamento em background faz chamadas síncronas (PDF, Gemini, ChromaDB) e bloqueia o event loop enquanto roda.
+- Sem fila: se o processo cair durante o processamento, o extrato fica `pending` e não há reprocessamento.
+- A memória semântica é compartilhada entre usuários.
+- A resposta do LLM não é validada antes de entrar no banco; uma categoria inválida leva o extrato inteiro para `error`.
+- A API não expõe a listagem nem o status dos extratos (só o dashboard).
+- Não há deploy público.
+
+## Estrutura
+
+```
+src/bank_analyzer/
+├── api/         # rotas (auth, statements, dashboard) e dependências
+├── core/        # configuração, banco, segurança, rate limiter
+├── models/      # modelos SQLAlchemy
+├── schemas/     # schemas Pydantic
+├── services/    # parser, categorizer, memory, analytics, insight, storage
+└── templates/   # HTML do dashboard
+migrations/      # Alembic
+tests/           # unit/ e integration/
+```
