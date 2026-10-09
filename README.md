@@ -30,13 +30,15 @@ O limite (`SIMILARITY_DISTANCE_THRESHOLD=0.18`) foi calibrado com embeddings rea
 
 Os embeddings ficam no mesmo banco das transações: são gravados na mesma transação SQL (se o processamento falha, nada fica pela metade) e isolados por usuário com um `WHERE user_id`. O projeto usou ChromaDB antes; trocar por pgvector eliminou um segundo banco para manter em sincronia.
 
-**Idempotência por hash.** O SHA-256 do PDF é guardado no upload; o mesmo arquivo enviado de novo pelo mesmo usuário retorna o extrato existente sem reprocessar.
+**Idempotência por hash.** O SHA-256 do PDF é guardado no upload; o mesmo arquivo enviado de novo pelo mesmo usuário retorna o extrato existente sem reprocessar. A checagem na aplicação é o caminho rápido; a garantia é uma constraint `UNIQUE(user_id, file_hash)` no banco, que barra dois uploads iguais simultâneos.
 
-**Processamento em background.** O upload responde na hora com status `pending`; a extração e a categorização rodam em `BackgroundTasks`, e o status passa por `processing` até `completed` ou `error`.
+**Processamento em background.** O upload responde na hora com status `pending`; extração, categorização e insight rodam em `BackgroundTasks`, e o status passa por `processing` até `completed` ou `error`. As chamadas síncronas (pdfplumber e Gemini) rodam em thread com `asyncio.to_thread`, para não travar o event loop: a API continua respondendo enquanto um extrato processa.
+
+**Insight gerado uma vez.** O texto do Gemini é gerado no processamento e salvo no extrato; a consulta da análise só faz cálculo local. Se a geração do insight falhar, o extrato fica completo sem ele, já que as métricas continuam válidas.
 
 **Armazenamento isolado em uma camada.** Os PDFs ficam em disco local, mas todo acesso passa por `services/storage.py`. O projeto já usou S3; voltar para object storage é trocar duas funções.
 
-**Segurança.** Cada consulta de análise filtra pelo dono do extrato (sem IDOR), o cookie do dashboard é `HttpOnly` + `Secure` + `SameSite=Lax`, e os endpoints de login e registro são limitados a 5 requisições por minuto por IP.
+**Segurança.** Senhas com hash Argon2 e JWT com expiração. A autenticação fica em duas dependencies em `api/deps.py`: uma lê o token do header `Authorization` (API, falha com 401) e outra do cookie (dashboard, redireciona para o login). Cada consulta filtra pelo dono do extrato (sem IDOR), o cookie é `HttpOnly` + `Secure` + `SameSite=Lax`, e login e registro são limitados a 5 requisições por minuto por IP.
 
 ## Rodando localmente
 
@@ -79,17 +81,15 @@ docker compose up -d db_test
 poetry run task test
 ```
 
-35 testes unitários e de integração, 85% de cobertura. As chamadas ao Gemini são mockadas; a busca vetorial roda de verdade contra o pgvector do banco de testes.
+47 testes unitários e de integração, 95% de cobertura. As chamadas ao Gemini são mockadas; banco, constraints e busca vetorial rodam de verdade contra o PostgreSQL de testes. Um dos testes mede o event loop durante uma extração lenta e falha se uma chamada bloqueante voltar para dentro dele.
 
 ## Limitações conhecidas
 
 Este é um projeto de estudo que roda localmente, em um único processo. As limitações abaixo são conhecidas e estão registradas, com o que eu faria em cada caso, em [docs/roadmap.md](docs/roadmap.md):
 
-- O insight é gerado pelo Gemini a cada consulta da análise, em vez de uma vez no processamento.
-- O processamento em background faz chamadas síncronas (leitura do PDF e Gemini) e bloqueia o event loop enquanto roda.
 - Sem fila: se o processo cair durante o processamento, o extrato fica `pending` e não há reprocessamento.
 - A resposta do LLM na extração (datas, valores, tipo) não é validada antes de entrar no banco; um campo malformado leva o extrato inteiro para `error`.
-- A API não expõe a listagem nem o status dos extratos (só o dashboard).
+- A API não tem endpoint de listagem de extratos (só o dashboard); o status de um extrato aparece na resposta da análise.
 - Não há deploy público.
 
 ## Estrutura
