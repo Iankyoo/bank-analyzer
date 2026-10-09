@@ -1,7 +1,13 @@
 .env
+.venv/
 __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
 .vscode/
+.coverage
+htmlcov/
+chroma_db/
+storage/
+.claude/

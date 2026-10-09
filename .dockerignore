@@ -1,8 +1,13 @@
-.env
 .git
+.env
+.venv
 __pycache__
 *.pyc
 chroma_db
+storage
 htmlcov
+.coverage
 .pytest_cache
+.ruff_cache
+.mypy_cache
 tests/
